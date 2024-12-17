@@ -4,6 +4,7 @@ import (
 	"context"
 	"example/hello/cmd/internal/config"
 	"example/hello/cmd/internal/config/http/handlers/students"
+	"example/hello/cmd/internal/storage/sqlite"
 	"log"
 	"log/slog"
 	"net/http"
@@ -17,10 +18,18 @@ func main() {
 	// load config
 	cfg := config.MustLoad()
 
+	// database
+	storage, err := sqlite.New(cfg)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	slog.Info("Creating database", slog.String("env", cfg.Env))
 	// setup server
 	router := http.NewServeMux()
 
-	router.HandleFunc("POST /api/students", students.New())
+	router.HandleFunc("POST /api/students", students.New(storage))
+	router.HandleFunc("GET /api/students/{id}", students.GetById(storage))
 
 	// setup server
 	server := http.Server{
